@@ -1,0 +1,459 @@
+==============================
+Repository: src/core/autoware_core
+Branch: HEAD
+------------------------------
+ M localization/autoware_ekf_localizer/launch/ekf_localizer.launch.xml
+---- Differences ----
+diff --git a/localization/autoware_ekf_localizer/launch/ekf_localizer.launch.xml b/localization/autoware_ekf_localizer/launch/ekf_localizer.launch.xml
+index 76ac35bc..d44cf533 100644
+--- a/localization/autoware_ekf_localizer/launch/ekf_localizer.launch.xml
++++ b/localization/autoware_ekf_localizer/launch/ekf_localizer.launch.xml
+@@ -21,7 +21,7 @@
+   <node pkg="autoware_ekf_localizer" exec="autoware_ekf_localizer_node" output="both">
+     <remap from="in_pose_with_covariance" to="$(var input_pose_with_cov_name)"/>
+ 
+-    <remap from="in_twist_with_covariance" to="$(var input_twist_with_cov_name)"/>
++    <remap from="in_twist_with_covariance" to="sd_current_twist"/>
+ 
+     <remap from="initialpose" to="$(var input_initial_pose_name)"/>
+     <remap from="trigger_node_srv" to="$(var input_trigger_node_service_name)"/>
+
+==============================
+Repository: src/core/autoware_cmake
+Branch: HEAD
+------------------------------
+
+==============================
+Repository: src/core/autoware_adapi_msgs
+Branch: HEAD
+------------------------------
+
+==============================
+Repository: src/core/autoware_utils
+Branch: HEAD
+------------------------------
+
+==============================
+Repository: src/core/autoware_lanelet2_extension
+Branch: HEAD
+------------------------------
+
+==============================
+Repository: src/core/autoware_msgs
+Branch: HEAD
+------------------------------
+
+==============================
+Repository: src/core/autoware_rviz_plugins
+Branch: HEAD
+------------------------------
+
+==============================
+Repository: src/core/autoware_internal_msgs
+Branch: HEAD
+------------------------------
+
+==============================
+Repository: src/sensor_component/transport_drivers
+Branch: HEAD
+------------------------------
+
+==============================
+Repository: src/sensor_component/external/sensor_component_description
+Branch: HEAD
+------------------------------
+
+==============================
+Repository: src/sensor_component/external/nebula
+Branch: HEAD
+------------------------------
+
+==============================
+Repository: src/sensor_component/ros2_socketcan
+Branch: HEAD
+------------------------------
+
+==============================
+Repository: src/launcher/autoware_launch
+Branch: 23-09-25
+------------------------------
+ M autoware_launch/config/localization/ekf_localizer.param.yaml
+ M autoware_launch/config/planning/preset/default_preset.yaml
+ M autoware_launch/config/system/component_state_monitor/topics.yaml
+ M autoware_launch/launch/autoware.launch.xml
+ M autoware_launch/launch/components/tier4_control_component.launch.xml
+ M autoware_launch/launch/components/tier4_localization_component.launch.xml
+ M autoware_launch/launch/components/tier4_perception_component.launch.xml
+---- Differences ----
+diff --git a/autoware_launch/config/localization/ekf_localizer.param.yaml b/autoware_launch/config/localization/ekf_localizer.param.yaml
+index 5d0ad05..c1ac3b0 100644
+--- a/autoware_launch/config/localization/ekf_localizer.param.yaml
++++ b/autoware_launch/config/localization/ekf_localizer.param.yaml
+@@ -12,7 +12,7 @@
+       pose_additional_delay: 0.0
+       pose_measure_uncertainty_time: 0.01
+       pose_smoothing_steps: 5
+-      pose_gate_dist: 49.5 # corresponds to significance level = 10^-10
++      pose_gate_dist: 99.0 # corresponds to significance level = 10^-10
+ 
+     twist_measurement:
+       # for twist measurement
+diff --git a/autoware_launch/config/planning/preset/default_preset.yaml b/autoware_launch/config/planning/preset/default_preset.yaml
+index 312d93b..409a654 100644
+--- a/autoware_launch/config/planning/preset/default_preset.yaml
++++ b/autoware_launch/config/planning/preset/default_preset.yaml
+@@ -8,10 +8,10 @@ launch:
+   # behavior path modules
+   - arg:
+       name: launch_static_obstacle_avoidance
+-      default: "true"
++      default: "false"
+   - arg:
+       name: launch_avoidance_by_lane_change_module
+-      default: "true"
++      default: "false"
+   - arg:
+       name: launch_dynamic_obstacle_avoidance
+       default: "false"
+@@ -20,10 +20,10 @@ launch:
+       default: "false" # Warning, experimental module, use only in simulations
+   - arg:
+       name: launch_lane_change_right_module
+-      default: "true"
++      default: "false"
+   - arg:
+       name: launch_lane_change_left_module
+-      default: "true"
++      default: "false"
+   - arg:
+       name: launch_external_request_lane_change_right_module
+       default: "false"
+@@ -49,7 +49,7 @@ launch:
+       default: "true"
+   - arg:
+       name: launch_traffic_light_module
+-      default: "true"
++      default: "false"
+   - arg:
+       name: launch_intersection_module
+       default: "true"
+@@ -64,7 +64,7 @@ launch:
+       default: "true"
+   - arg:
+       name: launch_virtual_traffic_light_module
+-      default: "true"
++      default: "false"
+   - arg:
+       name: launch_no_stopping_area_module
+       default: "true"
+diff --git a/autoware_launch/config/system/component_state_monitor/topics.yaml b/autoware_launch/config/system/component_state_monitor/topics.yaml
+index 3845a96..2ba2914 100644
+--- a/autoware_launch/config/system/component_state_monitor/topics.yaml
++++ b/autoware_launch/config/system/component_state_monitor/topics.yaml
+@@ -190,6 +190,6 @@
+     child_frame_id: base_link
+     best_effort: false
+     transient_local: false
+-    warn_rate: 5.0
+-    error_rate: 1.0
+-    timeout: 1.0
++    warn_rate: 0.0
++    error_rate: 0.0
++    timeout: 0.0
+diff --git a/autoware_launch/launch/autoware.launch.xml b/autoware_launch/launch/autoware.launch.xml
+index 7ae670a..a9cd051 100644
+--- a/autoware_launch/launch/autoware.launch.xml
++++ b/autoware_launch/launch/autoware.launch.xml
+@@ -103,6 +103,7 @@
+     <include file="$(find-pkg-share autoware_launch)/launch/components/tier4_perception_component.launch.xml">
+       <arg name="data_path" value="$(var data_path)"/>
+       <arg name="pointcloud_container_name" value="$(var pointcloud_container_name)"/>
++      <!-- <arg name="use_traffic_light_recognition" value="false" />  -->
+     </include>
+   </group>
+ 
+diff --git a/autoware_launch/launch/components/tier4_control_component.launch.xml b/autoware_launch/launch/components/tier4_control_component.launch.xml
+index 801400f..0626ca3 100644
+--- a/autoware_launch/launch/components/tier4_control_component.launch.xml
++++ b/autoware_launch/launch/components/tier4_control_component.launch.xml
+@@ -52,6 +52,7 @@
+     <arg name="obstacle_collision_checker_param_path" value="$(find-pkg-share autoware_launch)/config/control/obstacle_collision_checker/obstacle_collision_checker.param.yaml"/>
+     <arg name="external_cmd_selector_param_path" value="$(find-pkg-share autoware_launch)/config/control/external_cmd_selector/external_cmd_selector.param.yaml"/>
+     <arg name="aeb_param_path" value="$(find-pkg-share autoware_launch)/config/control/autoware_autonomous_emergency_braking/autonomous_emergency_braking.param.yaml"/>
++    <!-- <arg name="launch_autonomous_emergency_braking" value="false"/> -->
+     <arg name="collision_detector_param_path" value="$(find-pkg-share autoware_launch)/config/control/autoware_collision_detector/collision_detector.param.yaml"/>
+     <arg name="use_aeb_autoware_state_check" value="$(var use_aeb_autoware_state_check)"/>
+     <arg name="predicted_path_checker_param_path" value="$(find-pkg-share autoware_launch)/config/control/predicted_path_checker/predicted_path_checker.param.yaml"/>
+diff --git a/autoware_launch/launch/components/tier4_localization_component.launch.xml b/autoware_launch/launch/components/tier4_localization_component.launch.xml
+index 0fbf7c1..52c5e04 100644
+--- a/autoware_launch/launch/components/tier4_localization_component.launch.xml
++++ b/autoware_launch/launch/components/tier4_localization_component.launch.xml
+@@ -2,7 +2,7 @@
+ <launch>
+   <arg name="loc_config_path" default="$(find-pkg-share autoware_launch)/config/localization"/>
+   <arg name="pose_source" default="ndt" description="select pose_estimator: ndt, yabloc, eagleye"/>
+-  <arg name="twist_source" default="gyro_odom" description="select twist_estimator. gyro_odom, eagleye"/>
++  <arg name="twist_source" default="twist_estimator" description="select twist_estimator. gyro_odom, eagleye"/>
+   <arg name="input_pointcloud" default="/sensing/lidar/concatenated/pointcloud" description="The topic will be used in the localization util module"/>
+   <arg name="localization_pointcloud_container_name" default="/pointcloud_container" description="The target container to which pointcloud preprocessing nodes in localization be attached"/>
+   <arg name="initial_pose" default="[]" description="initial pose (x, y, z, quat_x, quat_y, quat_z, quat_w)"/>
+diff --git a/autoware_launch/launch/components/tier4_perception_component.launch.xml b/autoware_launch/launch/components/tier4_perception_component.launch.xml
+index ab0a49a..956a5fd 100644
+--- a/autoware_launch/launch/components/tier4_perception_component.launch.xml
++++ b/autoware_launch/launch/components/tier4_perception_component.launch.xml
+@@ -42,7 +42,7 @@
+   <arg name="use_obstacle_segmentation_time_series_filter" default="true" description="use time series filter at the ground segmentation"/>
+   <arg name="segmentation_pointcloud_fusion_camera_ids" default="[0,2,4]" description="list of camera ids used for segmentation_pointcloud_fusion node, mainly using front camera"/>
+ 
+-  <arg name="occupancy_grid_map_method" default="pointcloud_based" description="options: pointcloud_based, laserscan_based, multi_lidar_pointcloud_based"/>
++  <arg name="occupancy_grid_map_method" default="laserscan_based" description="options: pointcloud_based, laserscan_based, multi_lidar_pointcloud_based"/>
+   <arg name="occupancy_grid_map_updater" default="binary_bayes_filter" description="options: binary_bayes_filter"/>
+   <arg name="detected_objects_filter_method" default="lanelet_filter" description="options: lanelet_filter, position_filter"/>
+   <arg name="detected_objects_validation_method" default="obstacle_pointcloud" description="options: obstacle_pointcloud, occupancy_grid (must be used with laserscan_based_occupancy_grid_map)"/>
+
+==============================
+Repository: src/twist_controller
+Branch: ackermann_controller
+------------------------------
+ M launch/twist_controller.launch.py
+?? twist_controller/__pycache__/
+---- Differences ----
+diff --git a/launch/twist_controller.launch.py b/launch/twist_controller.launch.py
+index 621efd3..c38cad5 100644
+--- a/launch/twist_controller.launch.py
++++ b/launch/twist_controller.launch.py
+@@ -47,12 +47,13 @@ def generate_launch_description():
+             launch_arguments={
+                 'sd_simulation_mode': LaunchConfiguration('sd_simulation_mode'),
+                 'sd_speed_source': LaunchConfiguration('sd_speed_source'),
++                'sd_vehicle': 'twizy',
+             }.items(),
+         ),
+ 
+         DeclareLaunchArgument(
+             'launch_foxglove',
+-            default_value='true',
++            default_value='false',
+             description='Launch foxglove bridge',
+         ),
+ 
+
+==============================
+Repository: src/universe/external/managed_transform_buffer
+Branch: HEAD
+------------------------------
+
+==============================
+Repository: src/universe/external/cuda_blackboard
+Branch: HEAD
+------------------------------
+
+==============================
+Repository: src/universe/external/negotiated
+Branch: HEAD
+------------------------------
+
+==============================
+Repository: src/universe/external/pointcloud_to_laserscan
+Branch: HEAD
+------------------------------
+
+==============================
+Repository: src/universe/external/tier4_ad_api_adaptor
+Branch: HEAD
+------------------------------
+
+==============================
+Repository: src/universe/external/glog
+Branch: HEAD
+------------------------------
+
+==============================
+Repository: src/universe/external/llh_converter
+Branch: HEAD
+------------------------------
+
+==============================
+Repository: src/universe/external/trt_batched_nms
+Branch: HEAD
+------------------------------
+
+==============================
+Repository: src/universe/external/muSSP
+Branch: HEAD
+------------------------------
+
+==============================
+Repository: src/universe/external/bevdet_vendor
+Branch: bevdet_vendor-ros2
+------------------------------
+
+==============================
+Repository: src/universe/external/morai_msgs
+Branch: HEAD
+------------------------------
+
+==============================
+Repository: src/universe/external/rtklib_ros_bridge
+Branch: HEAD
+------------------------------
+
+==============================
+Repository: src/universe/external/tier4_autoware_msgs
+Branch: HEAD
+------------------------------
+
+==============================
+Repository: src/universe/external/eagleye
+Branch: HEAD
+------------------------------
+
+==============================
+Repository: src/universe/autoware_universe
+Branch: 23-09-25
+------------------------------
+ M launch/tier4_localization_launch/launch/pose_twist_estimator/pose_twist_estimator.launch.xml
+ M launch/tier4_planning_launch/launch/scenario_planning/lane_driving/motion_planning/motion_planning.launch.xml
+---- Differences ----
+diff --git a/launch/tier4_localization_launch/launch/pose_twist_estimator/pose_twist_estimator.launch.xml b/launch/tier4_localization_launch/launch/pose_twist_estimator/pose_twist_estimator.launch.xml
+index 607cf8867..ca23a7d0e 100644
+--- a/launch/tier4_localization_launch/launch/pose_twist_estimator/pose_twist_estimator.launch.xml
++++ b/launch/tier4_localization_launch/launch/pose_twist_estimator/pose_twist_estimator.launch.xml
+@@ -58,11 +58,11 @@
+     </include>
+   </group>
+ 
+-  <!-- Gyro Odometer Launch (as twist estimator) 
++  <!-- Gyro Odometer Launch (as twist estimator)  -->
+   <group if="$(var use_gyro_odom_twist)">
+     <push-ros-namespace namespace="twist_estimator"/>
+     <include file="$(find-pkg-share tier4_localization_launch)/launch/pose_twist_estimator/gyro_odometer.launch.xml"/>
+-  </group>-->
++  </group>
+ 
+   <!-- Eagleye Launch -->
+   <group if="$(eval &quot;$(var use_eagleye_pose) or $(var use_eagleye_twist)&quot;)">
+diff --git a/launch/tier4_planning_launch/launch/scenario_planning/lane_driving/motion_planning/motion_planning.launch.xml b/launch/tier4_planning_launch/launch/scenario_planning/lane_driving/motion_planning/motion_planning.launch.xml
+index 93ed9d2e4..769bbe60d 100644
+--- a/launch/tier4_planning_launch/launch/scenario_planning/lane_driving/motion_planning/motion_planning.launch.xml
++++ b/launch/tier4_planning_launch/launch/scenario_planning/lane_driving/motion_planning/motion_planning.launch.xml
+@@ -2,12 +2,12 @@
+   <arg name="interface_input_topic" default="/planning/scenario_planning/lane_driving/behavior_planning/path"/>
+   <arg name="interface_output_topic" default="/planning/scenario_planning/lane_driving/trajectory"/>
+ 
+-  <arg name="launch_obstacle_stop_module" default="true"/>
+-  <arg name="launch_obstacle_slow_down_module" default="true"/>
+-  <arg name="launch_obstacle_cruise_module" default="true"/>
+-  <arg name="launch_dynamic_obstacle_stop_module" default="true"/>
++  <arg name="launch_obstacle_stop_module" default="false"/>
++  <arg name="launch_obstacle_slow_down_module" default="false"/>
++  <arg name="launch_obstacle_cruise_module" default="false"/>
++  <arg name="launch_dynamic_obstacle_stop_module" default="false"/>
+   <arg name="launch_out_of_lane_module" default="true"/>
+-  <arg name="launch_obstacle_velocity_limiter_module" default="true"/>
++  <arg name="launch_obstacle_velocity_limiter_module" default="false"/>
+   <arg name="launch_mvp_run_out_module" default="true"/>
+   <arg name="launch_module_list_end" default="&quot;&quot;]"/>
+ 
+
+==============================
+Repository: src/autoware_tools
+Branch: main
+------------------------------
+
+==============================
+Repository: src/SD-VehicleInterface
+Branch: HEAD
+------------------------------
+ M vehicle_interface/src/sd_vehicle_interface/sd_control.h
+ M vehicle_interface/src/sd_vehicle_interface/sd_vehicle_interface.cpp
+---- Differences ----
+diff --git a/vehicle_interface/src/sd_vehicle_interface/sd_control.h b/vehicle_interface/src/sd_vehicle_interface/sd_control.h
+index 00cef4f..c96a435 100644
+--- a/vehicle_interface/src/sd_vehicle_interface/sd_control.h
++++ b/vehicle_interface/src/sd_vehicle_interface/sd_control.h
+@@ -45,9 +45,9 @@ namespace speedcontroller {
+ #define ANTI_FUSSINESS_TWIZY (0.00175) // (0.1)
+ 
+ // Gains for increasing speed
+-#define Kp_Speed_Twizy (23)
+-#define Ki_Speed_Twizy (1)
+-#define Kd_Speed_Twizy (0)
++#define Kp_Speed_Twizy (750)
++#define Ki_Speed_Twizy (50)
++#define Kd_Speed_Twizy (1000)
+ 
+ // Gains for braking to a stop only
+ #define Kp_Speed_FullStop_Braking_Twizy (65)
+diff --git a/vehicle_interface/src/sd_vehicle_interface/sd_vehicle_interface.cpp b/vehicle_interface/src/sd_vehicle_interface/sd_vehicle_interface.cpp
+index 4a40adb..fb657e8 100644
+--- a/vehicle_interface/src/sd_vehicle_interface/sd_vehicle_interface.cpp
++++ b/vehicle_interface/src/sd_vehicle_interface/sd_vehicle_interface.cpp
+@@ -40,6 +40,7 @@ using namespace std;
+ #include "autoware_vehicle_msgs/msg/velocity_report.hpp"
+ #include "geometry_msgs/msg/quaternion.hpp"
+ #include "geometry_msgs/msg/twist_stamped.hpp"
++#include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
+ #include "geometry_msgs/msg/vector3.hpp"
+ #include "rclcpp/rclcpp.hpp"
+ #include "sd_auxiliary_controller.h"
+@@ -187,7 +188,7 @@ int main(int argc, char **argv) {
+       CustomerControlAuxiliaryCANTx); // Customer_Control_2
+ 
+   // message objects (stores incoming data)
+-  geometry_msgs::msg::TwistStamped current_Twist; // speed + steer
++  geometry_msgs::msg::TwistWithCovarianceStamped current_Twist; // speed + steer
+   sensor_msgs::msg::NavSatFix current_GPS;    // latitude/longitude + altitude
+   sensor_msgs::msg::Imu current_IMU;          // acceleration + angular rate
+   sd_msgs::msg::SDControl SD_Current_Control; // vehicle control message
+@@ -231,8 +232,8 @@ int main(int argc, char **argv) {
+ 
+   // current velocity
+   auto current_twist_pub =
+-      node->create_publisher<geometry_msgs::msg::TwistStamped>(
+-          "sd_current_twist", 100);
++      node->create_publisher<geometry_msgs::msg::TwistWithCovarianceStamped>(
++          "/localization/pose_twist_fusion_filter/sd_current_twist", 100);
+   auto current_GPS_pub = node->create_publisher<sensor_msgs::msg::NavSatFix>(
+       "sd_current_GPS", 100);
+   auto current_IMU_pub =
+@@ -303,9 +304,17 @@ int main(int argc, char **argv) {
+     // ===== UPDATE MESSAGES =====
+ 
+     // angular + linear velocity
+-    current_Twist.twist.angular.z = IMU_Rate_Z * DEG_to_RAD;
+-    current_Twist.twist.linear.x =
++    // angular + linear velocity
++    current_Twist.twist.twist.angular.z = IMU_Rate_Z * DEG_to_RAD;
++    current_Twist.twist.twist.linear.x =
+         CurrentTwistLinearSD_Mps_Final * UNDO_STREETDRONE_SCALING_FACTOR;
++
++    // initialize covariance to zeros
++    for (int i = 0; i < 36; ++i)
++    {
++      current_Twist.twist.covariance[i] = 100;
++    }
++    current_Twist.header.stamp = node->now();  // if inside an rclcpp::Node subclass
+     // GPS location
+     current_GPS.longitude = GPS_Longitude;
+     current_GPS.latitude = GPS_Latitude;
+@@ -413,7 +422,7 @@ int main(int argc, char **argv) {
+     indicator_status_pub->publish(current_IndicatorStatus);
+ 
+     current_SteeringStatus.stamp = node->get_clock()->now();
+-    current_SteeringStatus.steering_tire_angle = CurrentSteer_pc * MAX_STEER_ANG;
++    current_SteeringStatus.steering_tire_angle = (CurrentSteer_pc/100.0) * MAX_STEER_ANG;
+     steering_status_pub->publish(current_SteeringStatus);
+ 
+     current_VelocityStatus.header.stamp = node->get_clock()->now();
+
+==============================
+Repository: src/rclcpp
+Branch: t4-main
+------------------------------
+
+==============================
+Repository: src/middleware/external/agnocast
+Branch: HEAD
+------------------------------
+
