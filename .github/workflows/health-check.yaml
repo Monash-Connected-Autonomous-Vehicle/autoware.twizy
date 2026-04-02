@@ -11,6 +11,10 @@ on:
     - cron: 0 12 * * *
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   label-check:
     uses: autowarefoundation/autoware-github-actions/.github/workflows/make-sure-label-is-present.yaml@v1
@@ -33,18 +37,24 @@ jobs:
         include:
           - build-type: main
             platform: amd64
-            runner: ubuntu-24.04
+            runner: "['self-hosted','Linux','X64']"
             lib-dir: x86_64
+            container: ubuntu:22.04
           - build-type: nightly
             platform: amd64
-            runner: ubuntu-24.04
+            runner: "['ubuntu-24.04']"
             lib-dir: x86_64
           - build-type: main-arm64
             platform: arm64
-            runner: ubuntu-24.04-arm
+            runner: "['ubuntu-24.04-arm']"
             lib-dir: aarch64
-    runs-on: ${{ matrix.runner }}
+    runs-on: ${{ fromJson(matrix.runner) }}
     steps:
+      # https://github.com/actions/checkout/issues/211
+      - name: Change permission of workspace
+        run: |
+          sudo chown -R $USER:$USER ${{ github.workspace }}
+
       - name: Check out repository
         uses: actions/checkout@v4
 
@@ -55,11 +65,11 @@ jobs:
 
       - name: Get changed files
         id: changed-files
-        uses: step-security/changed-files@v45
+        uses: step-security/changed-files@v46
         with:
           files: |
             *.env
-            *.repos
+            repositories/*.repos
             .github/actions/docker-build/action.yaml
             .github/workflows/health-check.yaml
             ansible-galaxy-requirements.yaml
@@ -67,10 +77,14 @@ jobs:
             docker/**
             setup-dev-env.sh
 
+      - name: Show disk space
+        if: always()
+        run: |
+          df -h
+
       - name: Free disk space
-        if: ${{ steps.changed-files.outputs.any_changed == 'true' ||
-          github.event_name == 'schedule' ||
-          github.event_name == 'workflow_dispatch' }}
+        if: ${{ steps.changed-files.outputs.any_changed == 'true' &&
+          matrix.build-type != 'main' }}
         uses: ./.github/actions/free-disk-space
 
       - name: Build 'Autoware'
@@ -81,7 +95,7 @@ jobs:
         with:
           platform: ${{ matrix.platform }}
           cache-tag-suffix: ${{ matrix.build-type }}
-          additional-repos: ${{ matrix.build-type == 'nightly' && 'autoware-nightly.repos' || '' }}
+          additional-repos: ${{ matrix.build-type == 'nightly' && 'repositories/autoware-nightly.repos' || '' }}
           build-args: |
             ROS_DISTRO=${{ needs.load-env.outputs.rosdistro }}
             AUTOWARE_BASE_IMAGE=${{ needs.load-env.outputs.autoware_base_image }}

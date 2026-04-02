@@ -12,6 +12,7 @@ print_help() {
     echo "  --platform      Specify the platform (default: current platform)"
     echo "  --devel-only    Build devel image only"
     echo "  --target        Specify the target image (default: universe or universe-devel if --devel-only is set)"
+    echo "  --ros-distro    Specify ROS distribution (humble or jazzy, default: humble)"
     echo ""
     echo "Note: The --platform option should be one of 'linux/amd64' or 'linux/arm64'."
 }
@@ -41,6 +42,10 @@ parse_arguments() {
             option_target="$2"
             shift
             ;;
+        --ros-distro)
+            option_ros_distro="$2"
+            shift
+            ;;
         *)
             echo "Unknown option: $1"
             print_help
@@ -49,6 +54,15 @@ parse_arguments() {
         esac
         shift
     done
+}
+
+# Set ROS distribution
+set_ros_distro() {
+    if [ -n "$option_ros_distro" ]; then
+        ros_distro="$option_ros_distro"
+    else
+        ros_distro="humble"
+    fi
 }
 
 # Set CUDA options
@@ -60,6 +74,9 @@ set_cuda_options() {
         image_name_suffix="-cuda"
     fi
 }
+
+# Note: Image tags are loaded from env files (amd64.env or amd64_jazzy.env)
+# via the load_env() function, which sets $autoware_base_image and $autoware_base_cuda_image
 
 # Set build options
 set_build_options() {
@@ -101,7 +118,11 @@ set_arch_lib_dir() {
 
 # Load env
 load_env() {
-    source "$WORKSPACE_ROOT/amd64.env"
+    if [ "$ros_distro" = "humble" ]; then
+        source "$WORKSPACE_ROOT/amd64.env"
+    else
+        source "$WORKSPACE_ROOT/amd64_jazzy.env"
+    fi
     if [ "$platform" = "linux/arm64" ]; then
         source "$WORKSPACE_ROOT/arm64.env"
     fi
@@ -112,12 +133,10 @@ clone_repositories() {
     cd "$WORKSPACE_ROOT"
     if [ ! -d "src" ]; then
         mkdir -p src
-        vcs import src <autoware.repos
-        vcs import src <extra-packages.repos
+        vcs import --recursive src <repositories/autoware.repos
     else
         echo "Source directory already exists. Updating repositories..."
-        vcs import src <autoware.repos
-        vcs import src <extra-packages.repos
+        vcs import --recursive src <repositories/autoware.repos
         vcs pull src
     fi
 }
@@ -136,7 +155,7 @@ build_images() {
     echo "Target: $target"
 
     set -x
-    docker buildx bake --load --progress=plain -f "$SCRIPT_DIR/docker-bake-base.hcl" \
+    docker buildx bake --allow=ssh --load --progress=plain -f "$SCRIPT_DIR/docker-bake-base.hcl" \
         --set "*.context=$WORKSPACE_ROOT" \
         --set "*.ssh=default" \
         --set "*.platform=$platform" \
@@ -144,9 +163,9 @@ build_images() {
         --set "*.args.BASE_IMAGE=$base_image" \
         --set "*.args.SETUP_ARGS=$setup_args" \
         --set "*.args.LIB_DIR=$lib_dir" \
-        --set "base.tags=ghcr.io/autowarefoundation/autoware-base:latest" \
-        --set "base-cuda.tags=ghcr.io/autowarefoundation/autoware-base:cuda-latest"
-    docker buildx bake --load --progress=plain -f "$SCRIPT_DIR/docker-bake.hcl" -f "$SCRIPT_DIR/docker-bake-cuda.hcl" \
+        --set "base.tags=$autoware_base_image" \
+        --set "base-cuda.tags=$autoware_base_cuda_image"
+    docker buildx bake --allow=ssh --load --progress=plain -f "$SCRIPT_DIR/docker-bake.hcl" -f "$SCRIPT_DIR/docker-bake-cuda.hcl" \
         --set "*.context=$WORKSPACE_ROOT" \
         --set "*.ssh=default" \
         --set "*.platform=$platform" \
@@ -182,6 +201,7 @@ remove_dangling_images() {
 
 # Main script execution
 parse_arguments "$@"
+set_ros_distro
 set_cuda_options
 set_build_options
 set_platform
