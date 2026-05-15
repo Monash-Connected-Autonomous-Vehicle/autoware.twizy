@@ -139,9 +139,11 @@ if [ "$target_playbook" = "autoware.dev_env.openadkit" ]; then
     else
         ansible_args+=("--extra-vars" "prompt_download_artifacts=N")
     fi
-elif [ "$option_yes" = "true" ] || [ "$option_download_artifacts" = "true" ]; then
+elif [ "$option_download_artifacts" = "true" ]; then
     echo -e "\e[36mArtifacts will be downloaded to $option_data_dir\e[m"
     ansible_args+=("--extra-vars" "prompt_download_artifacts=y")
+else
+    ansible_args+=("--extra-vars" "prompt_download_artifacts=N")
 fi
 
 ansible_args+=("--extra-vars" "data_dir=$option_data_dir")
@@ -217,3 +219,4 @@ else
     echo -e "\e[31mFailed.\e[0m"
     exit 1
 fi
+
