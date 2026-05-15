@@ -1,8 +1,4 @@
 repositories:
-  universe/autoware_universe:
-    type: git
-    url: https://github.com/autowarefoundation/autoware_universe.git
-    version: 0.50.0
   launcher/autoware_launch:
     type: git
     url: https://github.com/Monash-Connected-Autonomous-Vehicle/autoware_launch.twizy.git
